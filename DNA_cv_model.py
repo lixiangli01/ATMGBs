@@ -1,4 +1,4 @@
-# 只用gcn(esm)+gcn(t5)+ca+gcn(esm)+gcn(t5)
+
 import pandas as pd
 import numpy as np
 import torch
@@ -11,7 +11,7 @@ from sklearn.model_selection import KFold
 from sklearn import metrics
 import warnings
 warnings.filterwarnings("ignore",category=DeprecationWarning)
-#from CA import EncoderLayer
+
 
 
 class GraphConvolution(nn.Module):
@@ -71,10 +71,10 @@ class deepGCN(nn.Module):
             layer_inner = self.act_fn(con(layer_inner,adj,_layers[0],self.lamda,self.alpha,i+1))
         layer_inner = F.dropout(layer_inner, self.dropout, training=self.training)
         
-        #layer_inner = self.fcs[-1](layer_inner)#(layer_inner[mutsite])#可能是在这里
+        
         return layer_inner
 
-#model = GraphPPIS(LAYER, INPUT_DIM, HIDDEN_DIM, NUM_CLASSES, DROPOUT, LAMBDA, ALPHA, VARIANT)
+
 class GraphPPIS(nn.Module):
     def __init__(self, nlayers,  nhidden, nclass, dropout, lamda, alpha, variant):
         super(GraphPPIS, self).__init__()
@@ -98,14 +98,7 @@ class GraphPPIS(nn.Module):
         self.criterion = nn.CrossEntropyLoss() # automatically do softmax to the predicted value and one-hot to the label
         self.optimizer = torch.optim.Adam(self.parameters(), lr = LEARNING_RATE, weight_decay = WEIGHT_DECAY)
 
-        # self.fc = nn.Sequential(nn.Linear(512, 128),
-        #                                 nn.LeakyReLU(0.1),
-        #                                 nn.Dropout(0.1),
-        #                                 nn.Linear(128, 32),
-        #                                 nn.LeakyReLU(0.1),
-        #                                 nn.Dropout(0.1),
-        #                                 nn.Linear(32, 2))
-        # self.Cross_attention =EncoderLayer(512, 512, 0.1, 0.1, 2)
+        
         self.fc = nn.Sequential(nn.Linear(1024, 256),#256#
                                         nn.LeakyReLU(0.1),
                                         nn.Dropout(0.1),
@@ -119,13 +112,12 @@ class GraphPPIS(nn.Module):
             nhead=3#4
         )
         
-    def forward(self, esmfea,t5fea, adj,w_embedding):          # x.shape = (seq_len, FEATURE_DIM); adj.shape = (seq_len, seq_len)
+    def forward(self, esmfea,t5fea, adj,w_embedding):          
         #esm_x = esmfea.float()
         t5_x = t5fea.float()
         
 
-        # esm_x=torch.squeeze(esm_x)
-        # output_esm = self.deep_gcn_esm(esm_x, adj)  # output.shape = (seq_len, NUM_CLASSES)
+        
         
         t5_x=torch.squeeze(t5_x)
         w_in=w_embedding.float()
@@ -145,7 +137,7 @@ class GraphPPIS(nn.Module):
 
 ###################################################################################################
 # dataset
-def norm_dis(mx): # from SPROF
+def norm_dis(mx): 
     return 2 / (1 + (np.maximum(mx, 4) / 4))
 
 def normalize(mx):
@@ -159,26 +151,13 @@ def normalize(mx):
 def load_graph(sequence_name):
 
     
-    #dismap = np.load(Feature_Path + "distance_map/" + sequence_name + ".npy")
+    
     try:
         dismap = np.load( "/home/xli/NABProt/task2_NABPs/genT5attenmap/DNA/" + sequence_name + "_attmap.npy")
     except:
         dismap = np.load( "/home/xli/NABProt/task2_NABPs/genT5attenmap/DNA/" + sequence_name + "_attmap.npy")
     dismap=dismap[:-1,:-1]
-    # mask = ((dismap >= 0) * (dismap <= 14))#14
-    # if MAP_TYPE == "d":
-    #     adjacency_matrix = mask.astype(np.int)
-    # elif MAP_TYPE == "c":
-    #     adjacency_matrix = norm_dis(dismap)
-    #     adjacency_matrix = mask * adjacency_matrix
-
-    # norm_matrix = normalize(adjacency_matrix.astype(np.float32))
-    #mask = ((dismap >= 0.01) * (dismap <= 0.01))
-
-    # mask=(dismap >= 0)
-    # adjacency_matrix = np.where(mask, dismap, 0)
-    # mask=(dismap >= 0)
-    # adjacency_matrix = np.where(mask, 1, dismap)
+    
     
     return dismap#dismap#norm_matrix
 
@@ -204,9 +183,9 @@ allindexnd=np.array(allindex)[:,1:]
 aadict={}
 for i in range(20):
     key=allindexnd[0,i]
-    # print(key)
+    
     values=[float(i) for i in allindexnd[1:,i]]
-    # print(values,len(values))
+    
     aadict[key]=np.array(values)
 
 aadict['X']=np.array([0]*531)
@@ -294,8 +273,7 @@ class ProDataset(Dataset):
     def __getitem__(self, index):
         sequence_name = self.names[index]#+'_'+self.chain[index]
         seq=self.seqs[index]
-        #mutsite = self.mutsite[index]
-        # label = np.array(self.labels[index])
+        
         label= np.array(list(self.labels[index])).astype('int')#self.labels[index]
         esm_embedding = esmembedding(sequence_name)
         t5_embedding = t5embedding(sequence_name)
@@ -304,19 +282,13 @@ class ProDataset(Dataset):
         #esm_embedding =np.concatenate([esm_embedding, aaindex_fea], axis=1)
         t5_embedding =np.concatenate([t5_embedding, esm_embedding], axis=1)#,aaindex_fea
 
-        #w1_embedding=t5_embedding#w1embedding(seq)
-        #w4_embedding=w4embedding(seq)
+        
         w_embedding=aaindex_fea#w1_embedding#w1_embedding#np.concatenate([w1_embedding, w4_embedding], axis=1)#256
 
         #sequence_embedding = np.concatenate([esm_embedding, bfd_embedding], axis=1)
 
         graph=load_graph(sequence_name)
-        # sequence_embedding = embedding(sequence_name, sequence, EMBEDDING)
-        # structural_features = get_dssp_features(sequence_name)
         
-        # node_features = np.concatenate([sequence_embedding, structural_features], axis = 1)
-        # graph = load_graph(sequence_name)
-        # print('123')
         return sequence_name, esm_embedding,t5_embedding, label , graph,w_embedding #,mutsite
     
     def __len__(self):
@@ -463,26 +435,16 @@ def analysis(y_true, y_pred, best_threshold = None):
     }
     return results
 
-LAYER = 8#16#8#8#8#8
-#INPUT_DIM =#2304 #1280#1024#256#1024
+LAYER = 8
 
-#0.930
-# HIDDEN_DIM = 512
-# NUM_CLASSES = 2
-# DROPOUT = 0.2
-# LAMBDA = 1.5
-# ALPHA = 0.7
-# VARIANT = True#
-# LEARNING_RATE = 1E-3 #1E-3#1E-5
-# WEIGHT_DECAY = 0
 
-HIDDEN_DIM = 1024#512
+HIDDEN_DIM = 1024
 NUM_CLASSES = 2
 DROPOUT = 0.1
 LAMBDA = 1.5
 ALPHA = 0.7
-VARIANT = False#True#
-LEARNING_RATE = 1E-3 #1E-3#1E-5
+VARIANT = False
+LEARNING_RATE = 1E-3 
 WEIGHT_DECAY = 0
 
 
@@ -497,29 +459,7 @@ if torch.cuda.is_available():
 MAP_TYPE = "c"
 
 trainset=pd.read_csv('/home/xli/NABProt/task2_NABPs/dataprocess/DNArawdataprocess/DNAtrain573.csv')
-#testset=pd.read_csv('/home/xli/NABProt/task2_NABPs/dataprocess/DNArawdataprocess/DNAtest129.csv')
 
-# trainset=trainset[:10]
-# testset=testset[:10]
-
-# trainset['label'] = trainset['label'].replace(-1, 0)
-
-#train_loader = DataLoader(dataset=ProDataset(trainset), batch_size=1, shuffle=True, num_workers=2)
-
-# testset['label'] = testset['label'].replace(-1, 0)
-
-#test_loader = DataLoader(dataset=ProDataset(testset), batch_size=1, shuffle=True, num_workers=2)
-
-# sequence_names = testset['name'].values
-# sequence_labels = testset['label'].values
-
-
-
-
-
-#train_loader=DataLoader(dataset=ProDataset(train_dataframe), batch_size=1, shuffle=True, num_workers=2)
-#valid_loader=DataLoader(dataset=ProDataset(valid_dataframe), batch_size=1, shuffle=True, num_workers=2)
-# fold=0
 
 complexarray=np.array(list(trainset['name'].values))
 
@@ -566,4 +506,3 @@ for train_index, valid_index in kfold.split(complexarray):
 
 cv_result=np.array(allfoldlist).mean(axis=0)
 cv_pd=pd.DataFrame(cv_result,columns=['epoch_loss_avg', 'binary_acc', 'precision', 'recall','f1','AUC','AUPRC','mcc'])
-#cv_pd.to_csv('/home/xli/NABProt/task2_NABPs/DNA/abmodel/newab/cv_dna_model4.csv')
