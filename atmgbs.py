@@ -410,9 +410,9 @@ testset=pd.DataFrame(datadict)
 
 test_loader = DataLoader(dataset=ProDataset(testset), batch_size=1, shuffle=True, num_workers=2)
 if args.binding_type=='DNA':
-    model.load_state_dict(torch.load('/home/xli/NABProt/PDNAPred/dnamodel/epoch5DNA.pkl'))
+    model.load_state_dict(torch.load('DNA_protein.pkl'))
 else:
-    model.load_state_dict(torch.load('/home/xli/NABProt/PDNAPred/rnamodel/epoch5RNA.pkl'))
+    model.load_state_dict(torch.load('RNA_protein.pkl'))
 
 epoch_loss_avg, valid_true, valid_pred, _  = evaluate(model, test_loader)
 
